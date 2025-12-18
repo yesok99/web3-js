@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>秒级复利实时计算器</title>
+  <style>
+    body {
+      font-family: system-ui;
+      background: #0f172a;
+      color: #e5e7eb;
+      padding: 40px;
+    }
+    .card {
+      max-width: 520px;
+      margin: auto;
+      background: #020617;
+      padding: 24px;
+      border-radius: 12px;
+      box-shadow: 0 0 30px rgba(0,0,0,.4);
+    }
+    h1 {
+      font-size: 22px;
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      margin-top: 14px;
+      font-size: 14px;
+      color: #cbd5f5;
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      margin-top: 6px;
+      background: #020617;
+      border: 1px solid #334155;
+      color: #e5e7eb;
+      border-radius: 6px;
+      font-size: 15px;
+    }
+    .result {
+      margin-top: 24px;
+      padding: 16px;
+      background: #020617;
+      border: 1px solid #334155;
+      border-radius: 8px;
+    }
+    .value {
+      font-size: 24px;
+      font-weight: bold;
+      color: #38bdf8;
+    }
+    .sub {
+      font-size: 13px;
+      color: #94a3b8;
+    }
+    .live {
+      margin-top: 16px;
+      padding-top: 12px;
+      border-top: 1px dashed #334155;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>📈 秒级复利（实时跳动）</h1>
+
+    <label>本金（USD）</label>
+    <input id="principal" type="number" value="1000" />
+
+    <label>每秒增长率（r）</label>
+    <input id="rate" type="number" step="0.0000000000000001" value="1.0000001380622" />
+
+    <label>投资天数</label>
+    <input id="days" type="number" value="30" />
+
+    <div class="result">
+      <div>最终金额（到期）：</div>
+      <div class="value" id="final">$0.00</div>
+
+      <div class="live">
+        <div>当前实时金额：</div>
+        <div class="value" id="current">$0.00</div>
+        <div class="sub" id="elapsed"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const principalInput = document.getElementById("principal");
+    const rateInput = document.getElementById("rate");
+    const daysInput = document.getElementById("days");
+
+    const finalEl = document.getElementById("final");
+    const currentEl = document.getElementById("current");
+    const elapsedEl = document.getElementById("elapsed");
+
+    let startTime = Date.now();
+    let timer = null;
+
+    function calculateFinal() {
+      const P = parseFloat(principalInput.value);
+      const r = parseFloat(rateInput.value);
+      const days = parseFloat(daysInput.value);
+
+      if (P <= 0 || r <= 0 || days <= 0) return null;
+
+      const totalSeconds = days * 86400;
+      const lnR = Math.log(r);
+      const finalAmount = P * Math.exp(totalSeconds * lnR);
+
+      finalEl.textContent = `$${finalAmount.toFixed(2)}`;
+
+      return { P, lnR, totalSeconds };
+    }
+
+    function startLive() {
+      if (timer) clearInterval(timer);
+
+      const params = calculateFinal();
+      if (!params) return;
+
+      startTime = Date.now();
+
+      timer = setInterval(() => {
+        const elapsedSeconds = (Date.now() - startTime) / 1000;
+        const t = Math.min(elapsedSeconds, params.totalSeconds);
+
+        const currentAmount =
+          params.P * Math.exp(t * params.lnR);
+
+        currentEl.textContent = `$${currentAmount.toFixed(6)}`;
+        elapsedEl.textContent =
+          `已复利 ${t.toFixed(1)} 秒 / ${params.totalSeconds} 秒`;
+
+        if (t >= params.totalSeconds) clearInterval(timer);
+      }, 1000);
+    }
+
+    principalInput.oninput = startLive;
+    rateInput.oninput = startLive;
+    daysInput.oninput = startLive;
+
+    startLive();
+  </script>
+</body>
+</html>
